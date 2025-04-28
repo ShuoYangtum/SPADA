@@ -26,4 +26,4 @@ Before running our code, please ensure that the following dependencies are met.<
 
 Running
 ----
-To run our program, you can simply execute the demonstration.ipyb file located in the root directory.<br> 
+To run our program, you can simply execute the demonstration.ipynb file located in the root directory.<br> 
