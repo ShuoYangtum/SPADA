@@ -61,4 +61,4 @@ spada.sample(100) # generate 100 new samples.
 
 Demonstration
 ----
-To run our program and check the output in each step, you can simply execute the demonstration.ipynb file located in the root directory.<br> 
+To run our program and check the output in each step, you can simply execute the `demonstration.ipynb` file located in the root directory.<br> 
