@@ -9,20 +9,13 @@ HELOC dataset: [https://www.kaggle.com/datasets/averkiyoliabev/home-equity-line-
 Iris dataset: [https://archive.ics.uci.edu/dataset/53/iris](https://archive.ics.uci.edu/dataset/53/iris)<br>
 California Housing dataset: [https://www.kaggle.com/datasets/camnugent/california-housing-prices](https://www.kaggle.com/datasets/camnugent/california-housing-prices)<br>
 
-Dependencies
+Setup
 ----
-Before running our code, please ensure that the following dependencies are met.<br> 
+To install the required dependencies, run:
 
-| Library  | Version |
-| ------------- | ------------- |
-| torch  | 2.3.0  |
-| torchvision  | 0.19.1  |
-| tokenizers  | 0.19.1  |
-| transformers  | 4.40.1  |
-| spacy  | 3.7.4  |
-| numpy  |  1.26.4  |
-| sentence-transformers  | 3.0.1  |
-| scikit-learn  | 1.4.2  |
+'''bash
+pip install -r requirements.txt
+'''
 
 ## Quickstart
 
