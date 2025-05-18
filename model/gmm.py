@@ -89,7 +89,7 @@ def safe_copula(values, copula_type='gaussian'):
 def uni(probabilities, discrete_values, precision):
     probabilities /= probabilities.sum()
     return {round(val, int(-np.log10(precision))): prob for val, prob in zip(discrete_values, probabilities)}
-    #return probabilities
+
     
 def estimate_conditional_distribution_KDE(df, num_key, str_key, conditions, num_pre_dis, target_key, \
                                           N=5, trees=None, method='kde', bw_method="scott"):
@@ -147,7 +147,7 @@ def estimate_conditional_distribution_KDE(df, num_key, str_key, conditions, num_
             return None
             
         num_samples = min(500, int((max_val - min_val) / precision))
-        #discrete_values = np.linspace(min_val, max_val, num_samples)
+
         discrete_values = np.arange(min_val, max_val + precision, precision)
         
         probabilities = kde(discrete_values)
@@ -174,7 +174,7 @@ def estimate_gmm_probabilities(samples, params, n_components=3):
     return dict(zip(x_values.flatten(), probabilities))
 
 
-def estimate_initiate_pro_distribution_for_num_features(df, num_keys, num_pre_dis, verbose=False, n_components=3): #verbose暂时没用
+def estimate_initiate_pro_distribution_for_num_features(df, num_keys, num_pre_dis, verbose=False, n_components=3): 
     
     if type(df) is str:
         df=pd.read_csv(df)
