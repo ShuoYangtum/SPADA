@@ -1,0 +1,13 @@
+copulas==0.12.1
+cvxpy==1.6.4
+joblib==1.4.2
+matplotlib==3.10.3
+networkx==3.3
+nflows==0.14
+numba==0.60.0
+numpy==2.2.6
+pandas==2.2.3
+scikit_learn==1.4.2
+scipy==1.15.3
+torch==2.4.1
+tqdm==4.66.4
