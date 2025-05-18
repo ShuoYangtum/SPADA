@@ -24,7 +24,7 @@ def remove_cycles(G, method='pagerank'):
         try:
             nx.find_cycle(dag, orientation='original') 
         except nx.NetworkXNoCycle:
-            print("图已是 DAG，无需修改")
+            print("The graph is DAG already. No need to modify it.")
             return dag 
         
         pagerank = nx.pagerank(dag)
@@ -87,7 +87,6 @@ def remove_cycles(G, method='pagerank'):
 
 
 def generate_dependencies(DAG):
-    """从 DAG 生成新的 dependencies 结构"""
     dependencies = {}
     
     for node in DAG.nodes():
