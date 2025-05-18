@@ -13,9 +13,9 @@ Setup
 ----
 To install the required dependencies, run:
 
-'''bash
+```bash
 pip install -r requirements.txt
-'''
+```
 
 ## Quickstart
 
