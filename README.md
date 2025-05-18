@@ -8,6 +8,9 @@ Adult Income dataset: [https://www.kaggle.com/datasets/wenruliu/adult-income-dat
 HELOC dataset: [https://www.kaggle.com/datasets/averkiyoliabev/home-equity-line-of-creditheloc](https://www.kaggle.com/datasets/averkiyoliabev/home-equity-line-of-creditheloc)<br>
 Iris dataset: [https://archive.ics.uci.edu/dataset/53/iris](https://archive.ics.uci.edu/dataset/53/iris)<br>
 California Housing dataset: [https://www.kaggle.com/datasets/camnugent/california-housing-prices](https://www.kaggle.com/datasets/camnugent/california-housing-prices)<br>
+The CDC dataset: [https://archive.ics.uci.edu/dataset/891/cdc+diabetes+health+indicators](https://archive.ics.uci.edu/dataset/891/cdc+diabetes+health+indicators)<br>
+The Mushroom dataset: [https://archive.ics.uci.edu/dataset/848/secondary+mushroom+dataset](https://archive.ics.uci.edu/dataset/848/secondary+mushroom+dataset)<br>
+
 
 Setup
 ----
