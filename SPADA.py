@@ -1,7 +1,7 @@
 from collections import defaultdict, namedtuple
-import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 from distribution import build_distribution_dict_for_str_features, build_precision_dict_for_num_features, pro_distribution_in_conditions, sample_from_dict
-from model.gmm import estimate_gmm_probabilities, estimate_initiate_pro_distribution_for_num_features, safe_kde, estimate_conditional_distribution_KDE
+from gmm import estimate_gmm_probabilities, estimate_initiate_pro_distribution_for_num_features, safe_kde, estimate_conditional_distribution_KDE
 from graph import build_graph_from_LLM_response, build_graph, remove_cycles, generate_dependencies
 from joblib import Parallel, delayed
 from lookup import filter_rows_by_column_for_str_features, filter_rows_by_column_for_num_features
@@ -11,7 +11,7 @@ import numpy as np
 from nflows.flows import Flow
 from nflows.distributions import StandardNormal
 from nflows.transforms import AffineCouplingTransform, ReversePermutation, CompositeTransform
-from model.nf import SwiGLU, ContextNet, nearest_valid_value, predict 
+from nf import SwiGLU, ContextNet, nearest_valid_value, predict 
 import pandas as pd
 import random
 from str_num import is_number_regex, number_type_key
@@ -51,18 +51,46 @@ class SPADA:
         Only return the constraint list for each feature. Do not include any explanation or additional text.
         '''
         return prompt
-        
+    def generate_feature_map(self, csv_file_path, target_feature):
+        try:
+            # 读取CSV文件的第一行以获取表头
+            df = pd.read_csv(csv_file_path, nrows=0)
+            all_features = df.columns.tolist()
+        except FileNotFoundError:
+            return f"错误：文件 '{csv_file_path}' 未找到。"
+        except Exception as e:
+            return f"读取CSV文件时发生错误：{e}"
+    
+        if target_feature not in all_features:
+            return f"错误：目标特征 '{target_feature}' 在CSV文件中不存在。"
+    
+        feature_map_lines = []
+        for feature in all_features:
+            if feature == target_feature:
+                # 目标特征的列表包含所有其他特征指向它的箭头
+                other_features = [f"{f}->{target_feature}" for f in all_features if f != target_feature]
+                feature_map_lines.append(f"{target_feature}: [{', '.join(other_features)}]")
+            else:
+                # 其他特征的列表为空
+                feature_map_lines.append(f"{feature}: []")
+    
+        return '\n'.join(feature_map_lines)
+
     def fit(
         self, 
         data,
         description,
         response=None,
-        blank='?'
-        ):
+        blank='?',
+        target_feature=None,
+        Tree=True):
 
+            
         num_key, str_key=number_type_key(data, verbose=True, blank=blank)
         prompt=self.fit_prompt(description, num_key, str_key)
-
+            
+        if target_feature:
+            response=self.generate_feature_map(data, target_feature)
         # generate a response from prompt
         response='\n'.join([i for i in response.split('\n') if i])
         dependencies=build_graph_from_LLM_response(response, num_key+str_key)  
@@ -191,6 +219,18 @@ class SPADA:
         self.num_key=num_key
         self.str_key=str_key
         self.num_pre_dis=num_pre_dis
+        self.scalers=scalers
+        self.encoders=encoders
+        if Tree:
+            print("Building Ball Tree..")
+            trees={}
+            for key in num_key:
+                trees[key] = BallTree(df[[key]].to_numpy(), leaf_size=40)  
+            print("Finished.")
+        else:
+            trees=None
+
+        self.trees=trees
         
     def generate_sample(self, i):
         bw_method=self.bw_method
@@ -248,8 +288,8 @@ class SPADA:
                         inputs = {}
                         for conditional_key in conditional_keys:
                             inputs[conditional_key]=selected_sample[conditional_key]
-    
-                        result = predict(node, inputs, dependencies,  num_pre_dis[node])
+                        model_wrapper = trained_models[node]
+                        result = predict(node, inputs, dependencies,  num_pre_dis[node], model_wrapper, num_key, str_key, self.scalers, self.encoders)
     
                         if result is not None:
                             selected_sample[node] = result
@@ -298,21 +338,8 @@ class SPADA:
         else:
             epoch_num=SAMPLE_NUMS//len(df)+1
             SAMPLE_NUMS=len(df)-1
-            
-        Tree=True
-        
-        if Tree:
-            print("Building Ball Tree..")
-            trees={}
-            for key in num_key:
-                trees[key] = BallTree(df[[key]].to_numpy(), leaf_size=40)  
-            print("Finished.")
-        else:
-            trees=None
         
         print("Start Generating..")
-        
-        self.trees=trees
             
         generated_samples=[]
         
@@ -320,6 +347,66 @@ class SPADA:
             print(f"Epoch: {epoch}/{epoch_num}")
             sample_indices = random.sample(range(len(df)), SAMPLE_NUMS)
             self.sample_indices=sample_indices
-            with concurrent.futures.ProcessPoolExecutor(max_workers=32) as executor:
+            with ThreadPoolExecutor(max_workers=32) as executor:
                 generated_samples += list(tqdm(executor.map(self.generate_sample, range(SAMPLE_NUMS)), total=SAMPLE_NUMS))
         return generated_samples
+
+    def fill_the_blank(self, df_input, target_feature,  KDE=True, bw_method='scott', T=1.0, N=1):
+    
+        generated = []
+        trees=self.trees
+        model_dict=self.trained_models 
+        dependencies=self.dependencies
+        num_key=self.num_key
+        str_key=self.str_key
+        num_pre_dis=self.num_pre_dis
+
+        df_input=pd.read_csv(df_input)
+        
+        for _, row in df_input.iterrows():
+            known_values = row.drop(labels=[target_feature]).to_dict()
+            conditional_keys = dependencies.get(target_feature, [])
+            available_conditions = {k: known_values[k] for k in conditional_keys if k in known_values}
+    
+            result = None
+    
+            # 尝试使用模型预测
+            if target_feature in model_dict:
+                model_wrapper = model_dict[target_feature]
+                result = predict(target_feature, available_conditions, dependencies,
+                                     num_pre_dis[target_feature], model_wrapper,
+                                     num_key, str_key, scalers=self.scalers, encoders=self.encoders)
+    
+            # fallback: KDE
+            if result is None and KDE:
+                CN = N
+                max_count = 5
+                c_count = 0
+                while c_count < max_count:
+                    result_dict = estimate_conditional_distribution_KDE(
+                        df_input, num_key, str_key,
+                        available_conditions,
+                        num_pre_dis, target_feature, N=CN, trees=trees,
+                        method='kde', bw_method=bw_method
+                    )
+                    if result_dict:
+                        result = sample_from_dict(result_dict, top_p=None, temperature=T)
+                        break
+                    else:
+                        CN *= 2
+                        c_count += 1
+    
+            generated.append(result)
+    
+        df_output = df_input.copy()
+        df_output["generated_" + target_feature] = generated
+        return df_output
+
+if __name__=="__main__":
+    spada=SPADA()
+    spada.fit(data='', 
+          description="None",
+          #response=None,
+          target_feature='')
+    df=spada.fill_the_blank('datasets/iris/test.csv', 'SepalLengthCm', "output.csv")
+    df.to_csv("output.csv", index=False, encoding='utf-8')

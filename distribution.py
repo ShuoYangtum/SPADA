@@ -1,7 +1,7 @@
 import pandas as pd
 import random
 from lookup import filter_rows_by_column_for_str_features, filter_rows_by_column_for_num_features
-from model.gmm import estimate_gmm_probabilities, estimate_initiate_pro_distribution_for_num_features
+from gmm import estimate_gmm_probabilities, estimate_initiate_pro_distribution_for_num_features
 import numpy as np
 #from numba import jit
 
